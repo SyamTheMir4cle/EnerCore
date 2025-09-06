@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { gsap } from 'gsap';
@@ -31,7 +30,7 @@ function Login() {
         localStorage.setItem('refresh_token', response.data.refresh);
         
         setTimeout(() => {
-            window.location.href = '/dashboard';
+            window.location.href = '/';
         }, 1000); // Tunggu 1 detik
 
         return 'Login Berhasil!';

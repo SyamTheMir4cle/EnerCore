@@ -1,16 +1,15 @@
 // src/App.jsx
 import React from 'react';
-import Login from './pages/Login'; // Impor komponen Login
-import './index.css'; // Impor file CSS Tailwind
+import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import router from './router';
 
 function App() {
   return (
-    <div >
-      {/* Untuk saat ini kita langsung tampilkan halaman Login */}
-      <Toaster position="top-right" reverseOrder={false} />
-      <Login />
-    </div>
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <RouterProvider router={router} />
+    </>
   );
 }
 
