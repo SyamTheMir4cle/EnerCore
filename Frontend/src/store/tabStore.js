@@ -1,4 +1,3 @@
-// src/store/tabStore.js
 import { create } from 'zustand';
 import Dashboard from '../pages/Dashboard'; // Impor komponen Dashboard
 

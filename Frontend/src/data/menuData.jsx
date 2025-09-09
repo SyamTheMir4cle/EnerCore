@@ -1,15 +1,15 @@
-// src/data/menuData.jsx
 import {
   BuildingOffice2Icon, BookOpenIcon, BanknotesIcon, ShoppingCartIcon,
   ArchiveBoxIcon, ChartBarIcon, HomeIcon
 } from '@heroicons/react/24/outline';
 import PlaceholderPage from '../pages/PlaceholderPage';
 import Dashboard from '../pages/Dashboard';
+import CoaPage from '../pages/coa/CoAPage';
 
-const createSubMenu = (id, title) => ({
+const createSubMenu = (id, title, Component = null) => ({
   id,
   title,
-  Component: () => <PlaceholderPage title={title} />,
+  Component: Component ? () => <Component /> : () => <PlaceholderPage title={title} />,
 });
 
 export const menuData = [
@@ -21,8 +21,11 @@ export const menuData = [
   {
     id: 'buku-besar', title: 'Buku Besar', icon: <BookOpenIcon className="h-6 w-6" />,
     subMenus: [
-      createSubMenu('coa', 'CoA'), createSubMenu('pencatatan-gaji', 'Pencatatan Gaji'),
-      createSubMenu('jurnal-umum', 'Jurnal Umum'), createSubMenu('log-aktifitas-jurnal', 'Log Aktifitas Jurnal'),
+      // 2. Ganti definisi submenu CoA
+      createSubMenu('coa', 'CoA', CoaPage), 
+      createSubMenu('pencatatan-gaji', 'Pencatatan Gaji'),
+      createSubMenu('jurnal-umum', 'Jurnal Umum'),
+      createSubMenu('log-aktifitas-jurnal', 'Log Aktifitas Jurnal'),
     ],
   },
   {
