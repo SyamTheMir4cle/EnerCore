@@ -1,4 +1,3 @@
-// src/pages/coa/CoaPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import apiClient from '../../api/apiClient';
@@ -8,21 +7,31 @@ import toast from 'react-hot-toast';
 
 function CoaPage() {
   const [akunList, setAkunList] = useState([]);
+  const [groupedAkun, setGroupedAkun] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // State untuk menyimpan data akun yang akan di-edit
   const [editingAkun, setEditingAkun] = useState(null);
 
   const fetchAkun = async () => {
     try {
       setLoading(true);
       const response = await apiClient.get('/buku-besar/akun/');
-      setAkunList(response.data);
+      const topLevelAkun = response.data;
+      setAkunList(topLevelAkun);
+
+      const groups = topLevelAkun.reduce((acc, akun) => {
+        const tipe = akun.tipe_akun;
+        if (!acc[tipe]) {
+          acc[tipe] = [];
+        }
+        acc[tipe].push(akun);
+        return acc;
+      }, {});
+      setGroupedAkun(groups);
       setError(null);
     } catch (err) {
       setError("Gagal memuat data Chart of Accounts.");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -31,35 +40,34 @@ function CoaPage() {
   useEffect(() => {
     fetchAkun();
   }, []);
-  
+
   const handleOpenCreateModal = () => {
-    setEditingAkun(null); // Pastikan form kosong
+    setEditingAkun(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (akun) => {
-    setEditingAkun(akun); // Isi form dengan data akun
+    setEditingAkun(akun);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setEditingAkun(null); // Selalu bersihkan state saat modal ditutup
+    setEditingAkun(null);
   };
 
   const handleSuccess = () => {
     handleCloseModal();
-    fetchAkun(); // Muat ulang data
+    fetchAkun();
   };
 
   const handleDelete = (akun) => {
-    // Minta konfirmasi sebelum menghapus
     if (window.confirm(`Apakah Anda yakin ingin menghapus akun "${akun.nama_akun}"?`)) {
       const promise = apiClient.delete(`/buku-besar/akun/${akun.kode_akun}/`);
       toast.promise(promise, {
         loading: 'Menghapus akun...',
         success: () => {
-          fetchAkun(); // Muat ulang data
+          fetchAkun();
           return 'Akun berhasil dihapus!';
         },
         error: 'Gagal menghapus akun.',
@@ -69,6 +77,24 @@ function CoaPage() {
 
   if (loading) return <div className="p-8">Memuat data...</div>;
   if (error) return <div className="p-8 text-red-500">{error}</div>;
+
+  const tipeOrder = [
+    'Kas & Bank',
+    'Piutang Usaha',
+    'Persediaan',
+    'Aset Lancar Lainnya',
+    'Aset Tetap',
+    'Akumulasi Penyusutan',
+    'Utang Usaha',
+    'Liabilitas Jangka Pendek',
+    'Liabilitas Jangka Panjang',
+    'Modal',
+    'Pendapatan',
+    'Harga Pokok Penjualan',
+    'Beban',
+    'Pendapatan lainnya',
+    'Beban lainnya'
+  ];
 
   return (
     <>
@@ -85,16 +111,26 @@ function CoaPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="p-3 text-sm font-semibold tracking-wide text-left">Nama Akun</th>
-                <th className="p-3 text-sm font-semibold tracking-wide text-left">Kode</th>
-                <th className="p-3 text-sm font-semibold tracking-wide text-left">Tipe</th>
+                <th className="p-3 text-sm font-semibold tracking-wide text-left">Kode Akun</th>
                 <th className="p-3 text-sm font-semibold tracking-wide text-right">Saldo Terkini</th>
-                <th className="p-3"></th>
+                <th className="w-20 p-3"></th>
               </tr>
             </thead>
             <tbody>
-              {akunList.map((akun) => (
-                <AkunRow key={akun.kode_akun} akun={akun} onEdit={handleOpenEditModal} onDelete={handleDelete} />
-              ))}
+              {tipeOrder.map(tipe => 
+                groupedAkun[tipe] && (
+                  <React.Fragment key={tipe}>
+                    <tr className="bg-gray-50">
+                      <td colSpan="4" className="p-3 text-sm font-bold text-gray-600">
+                        {tipe}
+                      </td>
+                    </tr>
+                    {groupedAkun[tipe].map((akun) => (
+                      <AkunRow key={akun.kode_akun} akun={akun} onEdit={handleOpenEditModal} onDelete={handleDelete} />
+                    ))}
+                  </React.Fragment>
+                )
+              )}
             </tbody>
           </table>
         </div>
@@ -104,7 +140,6 @@ function CoaPage() {
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Dialog.Panel className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-            {/* Judul modal dinamis */}
             <Dialog.Title className="text-xl font-bold mb-4">
               {editingAkun ? 'Ubah Akun' : 'Buat Akun Baru'}
             </Dialog.Title>
@@ -112,7 +147,6 @@ function CoaPage() {
               onClose={handleCloseModal} 
               onSuccess={handleSuccess}
               semuaAkun={akunList}
-              // Kirim data akun yang akan diedit ke form
               initialData={editingAkun} 
             />
           </Dialog.Panel>
@@ -123,3 +157,4 @@ function CoaPage() {
 }
 
 export default CoaPage;
+

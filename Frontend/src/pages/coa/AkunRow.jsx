@@ -1,30 +1,44 @@
-// src/pages/coa/AkunRow.jsx
 import React from 'react';
 import { Menu } from '@headlessui/react';
 import { ChevronDownIcon, EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 
-// Komponen sekarang menerima props onEdit dan onDelete
-function AkunRow({ akun, level = 0, onEdit, onDelete }) {
+function AkunRow({ akun, level = 0, onEdit, onDelete, showGroupHeader }) {
   const hasChildren = akun.children && akun.children.length > 0;
 
   return (
-    <>
-      <tr className="hover:bg-gray-50">
-        <td className="p-3 text-sm text-gray-700 whitespace-nowrap" style={{ paddingLeft: `${level * 24 + 12}px` }}>
+    <React.Fragment>
+      {/* Tampilkan header grup HANYA jika prop showGroupHeader bernilai true */}
+      {showGroupHeader && (
+         <tr className="bg-gray-50">
+            <td colSpan="4" className="p-3 text-sm font-bold text-gray-600">
+              {akun.tipe_akun}
+            </td>
+          </tr>
+      )}
+
+      {/* Baris untuk akun saat ini */}
+      <tr className="hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+        <td 
+          className="p-3 text-sm text-gray-700 whitespace-nowrap"
+          style={{ paddingLeft: `${level * 24 + 12}px` }}
+        >
           <div className="flex items-center gap-2">
             {hasChildren && <ChevronDownIcon className="h-4 w-4 text-gray-400" />}
             <span className="font-medium">{akun.nama_akun}</span>
           </div>
         </td>
-        <td className="p-3 text-sm text-gray-700 whitespace-nowrap">{akun.kode_akun}</td>
-        <td className="p-3 text-sm text-gray-700 whitespace-nowrap">{akun.tipe_akun}</td>
+        
+        <td className="p-3 text-sm text-gray-500 whitespace-nowrap">
+          {akun.kode_akun}
+        </td>
+
         <td className="p-3 text-sm text-gray-700 whitespace-nowrap text-right">
           {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(akun.saldo)}
         </td>
-        {/* Kolom untuk Menu Aksi */}
+        
         <td className="p-3 text-sm text-gray-700 text-center">
           <Menu as="div" className="relative inline-block text-left">
-            <Menu.Button className="p-1 rounded-full hover:bg-gray-200">
+            <Menu.Button className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700">
               <EllipsisVerticalIcon className="h-5 w-5" />
             </Menu.Button>
             <Menu.Items className="absolute right-0 mt-2 w-32 origin-top-right bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
@@ -49,13 +63,15 @@ function AkunRow({ akun, level = 0, onEdit, onDelete }) {
         </td>
       </tr>
 
+      {/* Panggil komponen ini lagi untuk setiap anak */}
       {hasChildren &&
         akun.children.map((childAkun) => (
-          <AkunRow key={childAkun.kode_akun} akun={childAkun} level={level + 1} onEdit={onEdit} onDelete={onDelete} />
+          <AkunRow key={childAkun.kode_akun} akun={childAkun} level={level + 1} onEdit={onEdit} onDelete={onDelete} showGroupHeader={false} />
         ))
       }
-    </>
+    </React.Fragment>
   );
 }
 
 export default AkunRow;
+

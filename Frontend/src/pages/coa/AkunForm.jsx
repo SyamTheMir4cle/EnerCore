@@ -1,9 +1,7 @@
-// src/pages/coa/AkunForm.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../../api/apiClient';
 import toast from 'react-hot-toast';
 
-// Helper function untuk mengubah data pohon menjadi daftar flat untuk <select>
 const flattenAkunForSelect = (akuns, level = 0) => {
   let list = [];
   akuns.forEach(akun => {
@@ -18,46 +16,100 @@ const flattenAkunForSelect = (akuns, level = 0) => {
   return list;
 };
 
-// Form menerima prop 'initialData' untuk membedakan mode Buat Baru vs. Ubah
+const findAkunInTree = (akuns, kode) => {
+  for (const akun of akuns) {
+    if (akun.kode_akun === kode) {
+      return akun;
+    }
+    if (akun.children && akun.children.length > 0) {
+      const found = findAkunInTree(akun.children, kode);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+};
+
 function AkunForm({ onClose, onSuccess, semuaAkun, initialData = null }) {
   const [formData, setFormData] = useState({
     kode_akun: '',
     nama_akun: '',
-    tipe_akun: 'Aset',
+    tipe_akun: 'Kas & Bank',
     parent: null,
+    saldo_awal: 0,
+    tanggal_saldo_awal: new Date().toISOString().split('T')[0],
   });
   const [flatAkunList, setFlatAkunList] = useState([]);
   const isEditMode = initialData !== null;
+  const kodeAkunInputRef = useRef(null);
 
   useEffect(() => {
-    // Siapkan data untuk dropdown Akun Induk
     setFlatAkunList(flattenAkunForSelect(semuaAkun));
-    
-    // Jika ada initialData (mode edit), isi form dengan data tersebut
     if (isEditMode) {
       setFormData({
         kode_akun: initialData.kode_akun,
         nama_akun: initialData.nama_akun,
         tipe_akun: initialData.tipe_akun,
-        parent: initialData.parent || null, // Pastikan nilai null ditangani dengan benar
+        parent: initialData.parent || null,
+        saldo_awal: initialData.saldo_awal,
+        tanggal_saldo_awal: initialData.tanggal_saldo_awal || new Date().toISOString().split('T')[0],
+      });
+    } else {
+      setFormData({
+        kode_akun: '',
+        nama_akun: '',
+        tipe_akun: 'Kas & Bank',
+        parent: null,
+        saldo_awal: 0,
+        tanggal_saldo_awal: new Date().toISOString().split('T')[0],
       });
     }
   }, [semuaAkun, initialData, isEditMode]);
 
-  // Handler untuk setiap perubahan pada input form
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Ubah nilai string "null" dari dropdown menjadi nilai null sebenarnya
     const finalValue = value === "null" ? null : value;
-    setFormData(prev => ({ ...prev, [name]: finalValue }));
+
+    setFormData(prev => {
+      const newData = { ...prev, [name]: finalValue };
+
+      if (name === 'parent') {
+        if (finalValue) {
+          const parentAkun = findAkunInTree(semuaAkun, finalValue);
+          let nextKode = '';
+
+          if (parentAkun && parentAkun.children && parentAkun.children.length > 0) {
+            const lastChildCode = parentAkun.children.reduce((maxCode, child) => {
+              return child.kode_akun > maxCode ? child.kode_akun : maxCode;
+            }, '0');
+            
+            const nextNumber = parseInt(lastChildCode, 10) + 1;
+            nextKode = String(nextNumber);
+          } else {
+            nextKode = `${finalValue}01`;
+          }
+          newData.kode_akun = nextKode;
+        } else {
+          newData.kode_akun = '';
+        }
+        
+        setTimeout(() => {
+          if (kodeAkunInputRef.current) {
+            kodeAkunInputRef.current.focus();
+            const val = kodeAkunInputRef.current.value;
+            kodeAkunInputRef.current.setSelectionRange(val.length, val.length);
+          }
+        }, 0);
+      }
+
+      return newData;
+    });
   };
 
-  // Handler saat form disubmit
   const handleSubmit = (e) => {
     e.preventDefault();
     let promise;
-
-    // Tentukan request API: PUT untuk ubah, POST untuk buat baru
     if (isEditMode) {
       promise = apiClient.put(`/buku-besar/akun/${initialData.kode_akun}/`, formData);
     } else {
@@ -67,27 +119,41 @@ function AkunForm({ onClose, onSuccess, semuaAkun, initialData = null }) {
     toast.promise(promise, {
       loading: 'Menyimpan data...',
       success: () => {
-        onSuccess(); // Panggil fungsi onSuccess dari parent (CoaPage)
+        onSuccess();
         return `Akun berhasil ${isEditMode ? 'diperbarui' : 'dibuat'}!`;
       },
       error: (err) => {
-        // Coba tampilkan pesan error dari backend jika ada, jika tidak tampilkan pesan umum
-        const messages = err.response?.data ? Object.values(err.response.data).join('\n') : 'Terjadi kesalahan.';
-        return `Gagal menyimpan: ${messages}`;
+        const messages = Object.values(err.response.data).join('\n');
+        return `Gagal: ${messages || err.message}`;
       },
     });
   };
   
-  const tipeAkunOptions = ['Aset', 'Liabilitas', 'Ekuitas', 'Pendapatan', 'Beban', 'Akumulasi Penyusutan', 'Harga Pokok Penjualan'];
+  const tipeAkunOptions = [
+    'Kas & Bank',
+    'Piutang Usaha',
+    'Persediaan',
+    'Aset Lancar Lainnya',
+    'Aset Tetap',
+    'Akumulasi Penyusutan',
+    'Utang Usaha',
+    'Liabilitas Jangka Pendek',
+    'Liabilitas Jangka Panjang',
+    'Modal',
+    'Pendapatan',
+    'Harga Pokok Penjualan',
+    'Beban',
+    'Pendapatan lainnya',
+    'Beban lainnya'
+  ];
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        {/* Kode Akun */}
         <div>
           <label htmlFor="kode_akun" className="block text-sm font-medium text-gray-700">Kode Akun</label>
-          {/* Kode Akun tidak bisa diubah saat mode edit */}
           <input 
+            ref={kodeAkunInputRef}
             type="text" 
             name="kode_akun" 
             id="kode_akun" 
@@ -95,76 +161,45 @@ function AkunForm({ onClose, onSuccess, semuaAkun, initialData = null }) {
             onChange={handleChange} 
             required 
             readOnly={isEditMode} 
-            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:border-blue-500 focus:ring-blue-500 ${isEditMode ? 'bg-gray-100' : ''}`}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm ${isEditMode ? 'bg-gray-100' : ''}`}
           />
         </div>
-
-        {/* Nama Akun */}
         <div>
           <label htmlFor="nama_akun" className="block text-sm font-medium text-gray-700">Nama Akun</label>
-          <input 
-            type="text" 
-            name="nama_akun" 
-            id="nama_akun" 
-            value={formData.nama_akun} 
-            onChange={handleChange} 
-            required 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          />
+          <input type="text" name="nama_akun" id="nama_akun" value={formData.nama_akun} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
         </div>
-
-        {/* Tipe Akun */}
         <div>
           <label htmlFor="tipe_akun" className="block text-sm font-medium text-gray-700">Tipe Akun</label>
-          <select 
-            id="tipe_akun" 
-            name="tipe_akun" 
-            value={formData.tipe_akun} 
-            onChange={handleChange} 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          >
+          <select id="tipe_akun" name="tipe_akun" value={formData.tipe_akun} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
             {tipeAkunOptions.map(tipe => <option key={tipe} value={tipe}>{tipe}</option>)}
           </select>
         </div>
-
-        {/* Akun Induk */}
         <div>
           <label htmlFor="parent" className="block text-sm font-medium text-gray-700">Akun Induk (Opsional)</label>
-          <select 
-            id="parent" 
-            name="parent" 
-            value={formData.parent || "null"} 
-            onChange={handleChange} 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          >
-            <option value="null">-- Tidak Ada (Akun Level Atas) --</option>
+          <select id="parent" name="parent" value={formData.parent || "null"} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            <option value="null">-- Tidak Ada --</option>
             {flatAkunList.map(akun => (
-              <option 
-                key={akun.kode_akun} 
-                value={akun.kode_akun}
-                // Nonaktifkan pilihan jika akunnya adalah akun yang sedang diedit
-                disabled={isEditMode && initialData.kode_akun === akun.kode_akun}
-              >
-                {akun.nama_akun}
-              </option>
+              <option key={akun.kode_akun} value={akun.kode_akun}>{akun.nama_akun}</option>
             ))}
           </select>
         </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="saldo_awal" className="block text-sm font-medium text-gray-700">Saldo Awal</label>
+            <input type="number" step="0.01" name="saldo_awal" id="saldo_awal" value={formData.saldo_awal} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
+          </div>
+          <div>
+            <label htmlFor="tanggal_saldo_awal" className="block text-sm font-medium text-gray-700">Per Tanggal</label>
+            <input type="date" name="tanggal_saldo_awal" id="tanggal_saldo_awal" value={formData.tanggal_saldo_awal} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
+          </div>
+        </div>
       </div>
-
-      {/* Tombol Aksi */}
       <div className="mt-6 flex justify-end gap-x-4">
-        <button 
-          type="button" 
-          onClick={onClose} 
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
-        >
+        <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
           Batal
         </button>
-        <button 
-          type="submit" 
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
+        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
           Simpan Akun
         </button>
       </div>
@@ -173,3 +208,4 @@ function AkunForm({ onClose, onSuccess, semuaAkun, initialData = null }) {
 }
 
 export default AkunForm;
+
