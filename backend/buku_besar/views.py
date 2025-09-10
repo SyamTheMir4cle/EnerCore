@@ -1,7 +1,9 @@
-# buku_besar/views.py
-from rest_framework import viewsets
-from .models import Akun
-from .serializers import AkunSerializer
+from rest_framework import viewsets, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Akun, JurnalUmum
+from .serializers import AkunSerializer, JurnalUmumSerializer, AkunListSerializer
 
 class AkunViewSet(viewsets.ModelViewSet):
     """
@@ -27,3 +29,19 @@ class AkunViewSet(viewsets.ModelViewSet):
         instance.saldo = instance.saldo_awal
         instance.save()
 
+    @action(detail=False, methods=['get'])
+    def list_all(self, request):
+        """
+        Custom endpoint to return a flat list of all accounts for form dropdowns.
+        """
+        queryset = Akun.objects.all().order_by('kode_akun')
+        serializer = AkunListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class JurnalUmumViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint untuk membuat dan melihat Jurnal Umum.
+    """
+    queryset = JurnalUmum.objects.all().order_by('-tanggal')
+    serializer_class = JurnalUmumSerializer

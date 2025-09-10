@@ -1,5 +1,6 @@
 from django.db import models
 from decimal import Decimal
+from django.utils import timezone # 1. Impor timezone
 
 class Akun(models.Model):
     class TipeAkun(models.TextChoices):
@@ -41,8 +42,52 @@ class Akun(models.Model):
 
     @property
     def get_saldo_akumulasi(self):
-        total = self.saldo_awal
+        """
+        Menghitung total saldo dari akun ini (saldo berjalan) ditambah
+        total saldo terakumulasi dari semua akun anaknya secara rekursif.
+        """
+        total = self.saldo
         for child in self.children.all():
             total += child.get_saldo_akumulasi
         return total
 
+
+class JurnalUmum(models.Model):
+    nomor_transaksi = models.CharField(max_length=25, unique=True, blank=True, editable=False)
+    
+    tanggal = models.DateField()
+    deskripsi = models.CharField(max_length=512)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-tanggal', '-nomor_transaksi']
+
+    def __str__(self):
+        return self.nomor_transaksi
+
+    def save(self, *args, **kwargs):
+        if not self.nomor_transaksi:
+            now = timezone.now()
+            prefix = f"JU-{now.strftime('%Y%m')}-"
+            
+            last_jurnal = JurnalUmum.objects.filter(nomor_transaksi__startswith=prefix).order_by('-nomor_transaksi').first()
+            
+            if last_jurnal:
+                last_seq = int(last_jurnal.nomor_transaksi[-4:])
+                new_seq = last_seq + 1
+            else:
+                new_seq = 1
+            
+            self.nomor_transaksi = f"{prefix}{new_seq:04d}"
+            
+        super().save(*args, **kwargs)
+
+class JurnalDetail(models.Model):
+    jurnal = models.ForeignKey(JurnalUmum, on_delete=models.CASCADE, related_name='details')
+    akun = models.ForeignKey(Akun, on_delete=models.PROTECT)
+    debit = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    kredit = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return f"Detail Jurnal #{self.jurnal.id} - Akun {self.akun.kode_akun}"

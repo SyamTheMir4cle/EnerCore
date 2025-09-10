@@ -5,6 +5,7 @@ import {
 import PlaceholderPage from '../pages/PlaceholderPage';
 import Dashboard from '../pages/Dashboard';
 import CoaPage from '../pages/coa/CoAPage';
+import JurnalUmumPage from '../pages/jurnalumum/JurnalUmumPage';
 
 const createSubMenu = (id, title, Component = null) => ({
   id,
@@ -24,7 +25,7 @@ export const menuData = [
       // 2. Ganti definisi submenu CoA
       createSubMenu('coa', 'CoA', CoaPage), 
       createSubMenu('pencatatan-gaji', 'Pencatatan Gaji'),
-      createSubMenu('jurnal-umum', 'Jurnal Umum'),
+      createSubMenu('jurnal-umum', 'Jurnal Umum', JurnalUmumPage),
       createSubMenu('log-aktifitas-jurnal', 'Log Aktifitas Jurnal'),
     ],
   },

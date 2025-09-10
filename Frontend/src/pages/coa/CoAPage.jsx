@@ -4,6 +4,7 @@ import apiClient from '../../api/apiClient';
 import AkunRow from './AkunRow';
 import AkunForm from './AkunForm';
 import toast from 'react-hot-toast';
+import { useTabStore } from '../../store/tabStore'; // 1. Impor store
 
 function CoaPage() {
   const [akunList, setAkunList] = useState([]);
@@ -12,6 +13,9 @@ function CoaPage() {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAkun, setEditingAkun] = useState(null);
+
+  // 2. Ambil state pemicu dari store
+  const coaLastUpdated = useTabStore((state) => state.coaLastUpdated);
 
   const fetchAkun = async () => {
     try {
@@ -39,7 +43,7 @@ function CoaPage() {
 
   useEffect(() => {
     fetchAkun();
-  }, []);
+  }, [coaLastUpdated]); // 3. Tambahkan pemicu ke dependency array!
 
   const handleOpenCreateModal = () => {
     setEditingAkun(null);
