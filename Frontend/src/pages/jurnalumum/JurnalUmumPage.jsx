@@ -5,17 +5,14 @@ import JurnalUmumForm from './JurnalUmumForm';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 
 function JurnalUmumPage() {
-  // State untuk mengelola tab internal
   const [internalTabs, setInternalTabs] = useState([
     { id: 'list', title: 'Daftar Jurnal Umum' }
   ]);
   const [activeTabId, setActiveTabId] = useState('list');
-  // State untuk memicu refresh daftar jurnal
   const [refreshKey, setRefreshKey] = useState(0); 
 
   const triggerCoaRefresh = useTabStore((state) => state.triggerCoaRefresh);
 
-  // Fungsi untuk membuka tab baru (dipanggil dari komponen anak)
   const openInternalTab = (tab) => {
     if (!internalTabs.some(t => t.id === tab.id)) {
       setInternalTabs([...internalTabs, tab]);
@@ -23,41 +20,36 @@ function JurnalUmumPage() {
     setActiveTabId(tab.id);
   };
 
-  // Fungsi untuk menutup tab internal
   const closeInternalTab = (tabIdToClose) => {
     const newTabs = internalTabs.filter(t => t.id !== tabIdToClose);
     setInternalTabs(newTabs);
-    // Jika tab yang ditutup adalah tab aktif, kembali ke daftar
     if (activeTabId === tabIdToClose) {
       setActiveTabId('list');
     }
   };
   
-  // Fungsi yang dipanggil setelah form berhasil disimpan
-  const handleSaveSuccess = useCallback((savedTabId) => {
-    triggerCoaRefresh(); // Memicu refresh saldo di CoA
-    setRefreshKey(prev => prev + 1); // Memicu refresh daftar jurnal di JurnalUmumList
+  const handleActionSuccess = useCallback((savedTabId) => {
+    triggerCoaRefresh();
+    setRefreshKey(prev => prev + 1);
     if (savedTabId) {
-      closeInternalTab(savedTabId); // Tutup tab form (new atau edit)
+      closeInternalTab(savedTabId);
     }
-  }, [triggerCoaRefresh]); // useCallback untuk stabilitas
+  }, [triggerCoaRefresh]);
 
-  // Fungsi untuk me-render konten tab yang aktif
+
   const renderContent = () => {
     const activeTab = internalTabs.find(t => t.id === activeTabId);
     if (!activeTab) return null;
 
     switch (activeTab.id) {
       case 'list':
-        // Kirim 'refreshKey' agar JurnalUmumList tahu kapan harus memuat ulang data
-        return <JurnalUmumList onOpenTab={openInternalTab} refreshKey={refreshKey} />;
+        return <JurnalUmumList onOpenTab={openInternalTab} refreshKey={refreshKey} onActionSuccess={handleActionSuccess} />;
       case 'new':
-        return <JurnalUmumForm onSaveSuccess={() => handleSaveSuccess('new')} />;
+        return <JurnalUmumForm onSaveSuccess={() => handleActionSuccess('new')} />;
       default:
-        // Menangani tab 'Ubah Jurnal'
         if (activeTab.id.startsWith('edit-')) {
           const jurnalId = activeTab.id.split('-')[1];
-          return <JurnalUmumForm jurnalId={jurnalId} onSaveSuccess={() => handleSaveSuccess(activeTab.id)} />;
+          return <JurnalUmumForm jurnalId={jurnalId} onSaveSuccess={() => handleActionSuccess(activeTab.id)} />;
         }
         return null;
     }

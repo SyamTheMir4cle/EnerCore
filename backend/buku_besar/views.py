@@ -1,10 +1,10 @@
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Akun, JurnalUmum
 from .serializers import AkunSerializer, JurnalUmumSerializer, AkunListSerializer
-
 class AkunViewSet(viewsets.ModelViewSet):
     """
     API endpoint yang memungkinkan akun untuk dilihat atau diubah.
@@ -18,13 +18,11 @@ class AkunViewSet(viewsets.ModelViewSet):
         return super().get_queryset()
 
     def perform_create(self, serializer):
-        # Saat membuat akun baru, saldo awal langsung menjadi saldo utama.
         instance = serializer.save()
         instance.saldo = instance.saldo_awal
         instance.save()
 
     def perform_update(self, serializer):
-        # Simpan perubahan dari form terlebih dahulu.
         instance = serializer.save()
         instance.saldo = instance.saldo_awal
         instance.save()

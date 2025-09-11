@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../../api/apiClient';
 import toast from 'react-hot-toast';
+import { useTabStore } from '../../store/tabStore';
 
-function JurnalUmumList({ onOpenTab, refreshKey }) {
+function JurnalUmumList({ onOpenTab, refreshKey, onActionSuccess }) {
   const [jurnals, setJurnals] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,12 +22,27 @@ function JurnalUmumList({ onOpenTab, refreshKey }) {
     fetchJurnals();
   }, [refreshKey]);
 
+  const handleDelete = (jurnal) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus jurnal "${jurnal.nomor_transaksi}"? Aksi ini akan mengembalikan saldo akun terkait.`)) {
+      const promise = apiClient.delete(`/buku-besar/jurnal/${jurnal.id}/`);
+
+      toast.promise(promise, {
+        loading: 'Menghapus jurnal...',
+        success: () => {
+          onActionSuccess();
+          return 'Jurnal berhasil dihapus!';
+        },
+        error: 'Gagal menghapus jurnal.',
+      });
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Memuat daftar jurnal...</div>;
 
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Jurnal Umum</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Daftar Jurnal Tercatat</h2>
         <button
           onClick={() => onOpenTab({ id: 'new', title: 'Jurnal Baru' })}
           className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition"
@@ -42,7 +58,7 @@ function JurnalUmumList({ onOpenTab, refreshKey }) {
               <th className="p-3 text-left text-sm font-semibold text-gray-600">No. Transaksi</th>
               <th className="p-3 text-left text-sm font-semibold text-gray-600">Deskripsi</th>
               <th className="p-3 text-right text-sm font-semibold text-gray-600">Total</th>
-              <th className="p-3"></th>
+              <th className="p-3 text-center text-sm font-semibold text-gray-600">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -63,13 +79,22 @@ function JurnalUmumList({ onOpenTab, refreshKey }) {
                       jurnal.details.reduce((sum, d) => sum + parseFloat(d.debit), 0)
                     )}
                   </td>
-                  <td className="p-3 text-sm text-gray-700 text-center">
-                    <button
-                      onClick={() => onOpenTab({ id: `edit-${jurnal.id}`, title: `Ubah ${jurnal.nomor_transaksi}` })}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Ubah
-                    </button>
+                  {/* 4. Tambahkan tombol Ubah dan Hapus */}
+                  <td className="p-3 text-sm text-center">
+                    <div className="flex justify-center gap-4">
+                      <button
+                        onClick={() => onOpenTab({ id: `edit-${jurnal.id}`, title: `Ubah ${jurnal.nomor_transaksi}` })}
+                        className="text-blue-600 hover:underline"
+                      >
+                        Ubah
+                      </button>
+                      <button
+                        onClick={() => handleDelete(jurnal)}
+                        className="text-red-600 hover:underline"
+                      >
+                        Hapus
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
